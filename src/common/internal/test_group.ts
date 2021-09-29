@@ -7,7 +7,7 @@ import {
   SubcaseParamsBuilder,
 } from '../framework/params_builder.js';
 import { Expectation } from '../internal/logging/result.js';
-import { TestCaseRecorder } from '../internal/logging/test_case_recorder.js';
+import { TestCaseRecorder, LogSeverity } from '../internal/logging/test_case_recorder.js';
 import { extractPublicParams, Merged, mergeParams } from '../internal/params_utils.js';
 import { compareQueries, Ordering } from '../internal/query/compare.js';
 import { TestQuerySingleCase, TestQueryWithExpectation } from '../internal/query/query.js';
@@ -451,6 +451,11 @@ class RunCaseSpecific implements RunCase {
     } else {
       await this.runTest(rec, this.params, false, getExpectedStatus(selfQuery));
     }
+
+    let status = rec.finalCaseStatus === LogSeverity.Pass ? '[pass]' : rec.finalCaseStatus === LogSeverity.Skip ? '[skip]' : rec.finalCaseStatus === LogSeverity.Warn ? '[warn]' : '[fail]';
+    let param_s = stringifyPublicParams(this.params)
+    console.log(selfQuery.suite + ":" + selfQuery.filePathParts.join() + ":" + selfQuery.testPathParts.join() + ":" + param_s, status)
+
     rec.finish();
   }
 }

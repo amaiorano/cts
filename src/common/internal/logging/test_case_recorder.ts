@@ -4,7 +4,7 @@ import { now, assert } from '../../util/util.js';
 import { LogMessageWithStack } from './log_message.js';
 import { Expectation, LiveTestCaseResult } from './result.js';
 
-enum LogSeverity {
+export enum LogSeverity {
   Pass = 0,
   Skip = 1,
   Warn = 2,
@@ -21,7 +21,7 @@ export class TestCaseRecorder {
   private result: LiveTestCaseResult;
   private inSubCase: boolean = false;
   private subCaseStatus = LogSeverity.Pass;
-  private finalCaseStatus = LogSeverity.Pass;
+  public finalCaseStatus = LogSeverity.Pass;
   private hideStacksBelowSeverity = kMinSeverityForStack;
   private startTime = -1;
   private logs: LogMessageWithStack[] = [];
