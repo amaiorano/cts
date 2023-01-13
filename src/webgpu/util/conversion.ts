@@ -709,18 +709,28 @@ export class Scalar {
       return str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
     };
     if (isFinite(this.value as number)) {
+      let result = '';
       switch (this.type.kind) {
         case 'f32':
-          return `${withPoint(this.value as number)}f`;
+          result = `${withPoint(this.value as number)}f`;
+          break;
         case 'f16':
-          return `${withPoint(this.value as number)}h`;
+          result = `${withPoint(this.value as number)}h`;
+          break;
         case 'u32':
-          return `${this.value}u`;
+          result = `${this.value}u`;
+          break;
         case 'i32':
-          return `i32(${this.value})`;
+          result = `i32(${this.value})`;
+          break;
         case 'bool':
-          return `${this.value}`;
+          result = `${this.value}`;
+          break;
       }
+
+      // If value is -0, prefix with unary minus
+      const neg_zero = Object.is(this.value, -0);
+      return neg_zero ? '-' + result : result;
     }
     throw new Error(
       `scalar of value ${this.value} and type ${this.type} has no WGSL representation`
@@ -762,8 +772,10 @@ export function f64(value: number): Scalar {
 }
 /** Create an f32 from a numeric value, a JS `number`. */
 export function f32(value: number): Scalar {
-  const arr = new Float32Array([value]);
-  return new Scalar(TypeF32, arr[0], arr);
+  // Float32Array turns -0 into 0
+  const neg_zero = Object.is(value, -0);
+  const arr = new Float32Array([value]); // TODO: if -0, bits does not represent this value
+  return new Scalar(TypeF32, neg_zero ? -0 : arr[0], arr);
 }
 /** Create an f16 from a numeric value, a JS `number`. */
 export function f16(value: number): Scalar {
@@ -783,8 +795,10 @@ export function f16Bits(bits: number): Scalar {
 
 /** Create an i32 from a numeric value, a JS `number`. */
 export function i32(value: number): Scalar {
+  // Int32Array turns -0 into 0
+  const neg_zero = Object.is(value, -0);
   const arr = new Int32Array([value]);
-  return new Scalar(TypeI32, arr[0], arr);
+  return new Scalar(TypeI32, neg_zero ? -0 : arr[0], arr);
 }
 /** Create an i16 from a numeric value, a JS `number`. */
 export function i16(value: number): Scalar {
