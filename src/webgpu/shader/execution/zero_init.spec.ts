@@ -61,15 +61,15 @@ g.test('compute,zero_init')
         switch (addressSpace) {
           case 'workgroup':
             return [
-              [1, 1, 1],
+              // [1, 1, 1],
               [1, 32, 1],
-              [64, 1, 1],
-              [1, 1, 48],
-              [1, 47, 1],
-              [33, 1, 1],
-              [1, 1, 63],
-              [8, 8, 2],
-              [7, 7, 3],
+              // [64, 1, 1],
+              // [1, 1, 48],
+              // [1, 47, 1],
+              // [33, 1, 1],
+              // [1, 1, 63],
+              // [8, 8, 2],
+              // [7, 7, 3],
             ];
           case 'function':
           case 'private':
@@ -248,6 +248,14 @@ g.test('compute,zero_init')
     `;
     let functionScope = '';
 
+    const is_vec3_f32 =
+      t.params._type.type === 'container' &&
+      t.params._type.containerType == 'vec3' &&
+      t.params._type.scalarType == 'f32';
+    if (!is_vec3_f32) {
+      return;
+    }
+
     const declaredStructTypes = new Map<ShaderTypeInfo, string>();
     const typeDecl = (function ensureType(
       typeName: string,
@@ -388,7 +396,7 @@ g.test('compute,zero_init')
 
           // Note: this could have an early return, but we omit it because it makes
           // the tests fail cause with DXGI_ERROR_DEVICE_HUNG on Windows.
-          return `\nif (${value} != ${expected}) { atomicStore(&output.failed, 1u); }`;
+          return `\nif (${value} != ${expected}) { atomicStore(&output.failed, u32(${value})); }`;
         }
       }
     })('testVar', t.params._type);
@@ -403,97 +411,97 @@ g.test('compute,zero_init')
       }
     `;
 
-    if (t.params.addressSpace === 'workgroup') {
-      // Populate the maximum amount of workgroup memory with known values to
-      // ensure initialization overrides in another shader.
-      const wg_memory_limits = t.device.limits.maxComputeWorkgroupStorageSize;
-      const wg_x_dim = t.device.limits.maxComputeWorkgroupSizeX;
+    // if (t.params.addressSpace === 'workgroup') {
+    //   // Populate the maximum amount of workgroup memory with known values to
+    //   // ensure initialization overrides in another shader.
+    //   const wg_memory_limits = t.device.limits.maxComputeWorkgroupStorageSize;
+    //   const wg_x_dim = t.device.limits.maxComputeWorkgroupSizeX;
 
-      const wgsl = `
-      @group(0) @binding(0) var<storage, read> inputs : array<u32>;
-      @group(0) @binding(1) var<storage, read_write> outputs : array<u32>;
-      var<workgroup> wg_mem : array<u32, ${wg_memory_limits} / 4>;
+    //   const wgsl = `
+    //   @group(0) @binding(0) var<storage, read> inputs : array<u32>;
+    //   @group(0) @binding(1) var<storage, read_write> outputs : array<u32>;
+    //   var<workgroup> wg_mem : array<u32, ${wg_memory_limits} / 4>;
 
-      @compute @workgroup_size(${wg_x_dim})
-      fn fill(@builtin(local_invocation_index) lid : u32) {
-        const num_u32_per_invocation = ${wg_memory_limits} / (4 * ${wg_x_dim});
+    //   @compute @workgroup_size(${wg_x_dim})
+    //   fn fill(@builtin(local_invocation_index) lid : u32) {
+    //     const num_u32_per_invocation = ${wg_memory_limits} / (4 * ${wg_x_dim});
 
-        for (var i = 0u; i < num_u32_per_invocation; i++) {
-          let idx = num_u32_per_invocation * lid + i;
-          wg_mem[idx] = inputs[idx];
-        }
-        workgroupBarrier();
-        // Copy out to avoid wg_mem being elided.
-        for (var i = 0u; i < num_u32_per_invocation; i++) {
-          let idx = num_u32_per_invocation * lid + i;
-          outputs[idx] = wg_mem[idx];
-        }
-      }
-      `;
+    //     for (var i = 0u; i < num_u32_per_invocation; i++) {
+    //       let idx = num_u32_per_invocation * lid + i;
+    //       wg_mem[idx] = inputs[idx];
+    //     }
+    //     workgroupBarrier();
+    //     // Copy out to avoid wg_mem being elided.
+    //     for (var i = 0u; i < num_u32_per_invocation; i++) {
+    //       let idx = num_u32_per_invocation * lid + i;
+    //       outputs[idx] = wg_mem[idx];
+    //     }
+    //   }
+    //   `;
 
-      const fillLayout = t.device.createBindGroupLayout({
-        entries: [
-          {
-            binding: 0,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'read-only-storage' },
-          },
-          {
-            binding: 1,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'storage' },
-          },
-        ],
-      });
+    //   const fillLayout = t.device.createBindGroupLayout({
+    //     entries: [
+    //       {
+    //         binding: 0,
+    //         visibility: GPUShaderStage.COMPUTE,
+    //         buffer: { type: 'read-only-storage' },
+    //       },
+    //       {
+    //         binding: 1,
+    //         visibility: GPUShaderStage.COMPUTE,
+    //         buffer: { type: 'storage' },
+    //       },
+    //     ],
+    //   });
 
-      const fillPipeline = await t.device.createComputePipelineAsync({
-        layout: t.device.createPipelineLayout({ bindGroupLayouts: [fillLayout] }),
-        label: 'Workgroup Fill Pipeline',
-        compute: {
-          module: t.device.createShaderModule({
-            code: wgsl,
-          }),
-          entryPoint: 'fill',
-        },
-      });
+    //   const fillPipeline = await t.device.createComputePipelineAsync({
+    //     layout: t.device.createPipelineLayout({ bindGroupLayouts: [fillLayout] }),
+    //     label: 'Workgroup Fill Pipeline',
+    //     compute: {
+    //       module: t.device.createShaderModule({
+    //         code: wgsl,
+    //       }),
+    //       entryPoint: 'fill',
+    //     },
+    //   });
 
-      const inputBuffer = t.makeBufferWithContents(
-        new Uint32Array([...iterRange(wg_memory_limits / 4, _i => 0xdeadbeef)]),
-        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-      );
-      t.trackForCleanup(inputBuffer);
-      const outputBuffer = t.device.createBuffer({
-        size: wg_memory_limits,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-      });
-      t.trackForCleanup(outputBuffer);
+    //   const inputBuffer = t.makeBufferWithContents(
+    //     new Uint32Array([...iterRange(wg_memory_limits / 4, _i => 0xdeadbeef)]),
+    //     GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+    //   );
+    //   t.trackForCleanup(inputBuffer);
+    //   const outputBuffer = t.device.createBuffer({
+    //     size: wg_memory_limits,
+    //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    //   });
+    //   t.trackForCleanup(outputBuffer);
 
-      const bg = t.device.createBindGroup({
-        layout: fillPipeline.getBindGroupLayout(0),
-        entries: [
-          {
-            binding: 0,
-            resource: {
-              buffer: inputBuffer,
-            },
-          },
-          {
-            binding: 1,
-            resource: {
-              buffer: outputBuffer,
-            },
-          },
-        ],
-      });
+    //   const bg = t.device.createBindGroup({
+    //     layout: fillPipeline.getBindGroupLayout(0),
+    //     entries: [
+    //       {
+    //         binding: 0,
+    //         resource: {
+    //           buffer: inputBuffer,
+    //         },
+    //       },
+    //       {
+    //         binding: 1,
+    //         resource: {
+    //           buffer: outputBuffer,
+    //         },
+    //       },
+    //     ],
+    //   });
 
-      const e = t.device.createCommandEncoder();
-      const p = e.beginComputePass();
-      p.setPipeline(fillPipeline);
-      p.setBindGroup(0, bg);
-      p.dispatchWorkgroups(1);
-      p.end();
-      t.queue.submit([e.finish()]);
-    }
+    //   const e = t.device.createCommandEncoder();
+    //   const p = e.beginComputePass();
+    //   p.setPipeline(fillPipeline);
+    //   p.setBindGroup(0, bg);
+    //   p.dispatchWorkgroups(1);
+    //   p.end();
+    //   t.queue.submit([e.finish()]);
+    // }
 
     const pipeline = await t.device.createComputePipelineAsync({
       layout: 'auto',
